@@ -1,0 +1,42 @@
+[project]
+name = "student-proficiency-ai-teacher-assistant"
+version = "0.1.0"
+description = "ASSISTments student performance modeling and teacher-assist GenAI portfolio project. Predict student proficiency from longitudinal learning data and deliver explainable, teacher-facing analytics through a grounded AI assistant."
+readme = "README.md"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "pandas>=2.2",
+    "numpy>=2.1",
+    "scipy>=1.14",
+    "scikit-learn>=1.6",
+    "xgboost>=3.0",
+    "plotly>=6.0",
+    "kaleido>=1.0",
+    "jupyterlab>=4.3",
+    "ipykernel>=6.29",
+    "pyarrow>=18.0",
+    "joblib>=1.4",
+    "python-dotenv>=1.0",
+    "streamlit>=1.41",
+    "langchain-core>=0.3",
+    "langchain-openai>=0.3",
+    "langgraph>=0.2",
+    "pydantic>=2.10",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.9",
+    "pytest>=8.3",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
