@@ -179,11 +179,3 @@ secrets/
 
 # notes folder
 notes/
-
-# downloaded and generated project data
-data/raw/*.csv
-data/processed/
-
-# trained model artifacts
-models/*.pkl
-models/*.joblib
