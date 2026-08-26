@@ -179,3 +179,7 @@ secrets/
 
 # notes folder
 notes/
+
+# Spreadsheet authoring previews and temporary support files
+outputs/teacher_support_studio/*
+!outputs/teacher_support_studio/teacher_support_name_mapping.xlsx

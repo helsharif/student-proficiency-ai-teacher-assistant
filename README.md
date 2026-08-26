@@ -74,8 +74,47 @@ predictors and held-out evaluation protocol.
 
 Next steps are subgroup and temporal-stability audits, student-clustered
 uncertainty intervals, probability recalibration if needed, and an evaluation
-split designed explicitly for unseen-student generalization. Dashboard and
-grounded assistant development remain future work.
+split designed explicitly for unseen-student generalization. A first local
+teacher-support application and persisted deployment artifacts are now
+available; production monitoring remains future work.
+
+## Teacher Support Studio
+
+The repository includes a locally runnable first draft of **Teacher Support
+Studio**, a FastAPI application with class- and student-focused summaries,
+responsive graphics, and a contextual question panel. The display uses
+synthetic names over authentic deidentified class groupings. Its predictive
+cards load the XGBoost artifact exported by notebook 05; the logistic-regression
+artifact remains available as a deployment-ready benchmark but is not used by
+the app.
+
+Synthetic display names are mapped to real deidentified `class_id` and
+`student_id` values in
+`outputs/teacher_support_studio/teacher_support_name_mapping.xlsx`. Edit a name
+or the `include_in_demo` setting, save the workbook, and refresh the app. The
+mapping is reloaded automatically after the saved file changes.
+
+Without an OpenAI API key, the app returns deterministic guided responses so
+the full experience remains usable. With `OPENAI_API_KEY` configured, a
+LangGraph workflow uses OpenAI to generate a structured response grounded in
+the displayed evidence.
+
+Run the app locally:
+
+```powershell
+uv sync
+uv run uvicorn teacher_support_studio.main:app --app-dir src --reload
+```
+
+Then open `http://127.0.0.1:8000`. Interactive API documentation is available
+at `http://127.0.0.1:8000/docs`. To enable live OpenAI responses, copy
+`.env_example` to `.env`, add a scoped API key, and load those environment
+variables before starting the server.
+
+Notebook 04 exports its complete preprocessing and logistic-regression pipeline
+to `models/logistic_regression/`. Notebook 05 exports the portable native model
+and serving metadata used by the app to `models/xgboost/`. Re-executing either
+notebook refreshes its corresponding bundle.
 
 ## Reproduce the analysis
 

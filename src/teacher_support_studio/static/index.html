@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Teacher-facing learning analytics and grounded support assistant." />
+    <title>Teacher Support Studio</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2224%22 fill=%22%23176f6a%22/><text x=%2250%22 y=%2264%22 text-anchor=%22middle%22 font-size=%2242%22 font-family=%22Arial%22 font-weight=%22700%22 fill=%22white%22>TS</text></svg>" />
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="Teacher Support Studio home">
+        <span class="brand-mark" aria-hidden="true">TS</span>
+        <span>
+          <strong>Teacher Support Studio</strong>
+          <small>Notice patterns. Plan the next step.</small>
+        </span>
+      </a>
+      <div class="demo-badge"><span></span> Local demo · Deidentified data</div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div>
+          <p class="kicker">Teacher-guided learning support</p>
+          <h1>What would you like to focus on?</h1>
+          <p class="hero-copy">Choose a class or a student, review recent learning patterns, and ask for practical next steps.</p>
+        </div>
+        <div class="focus-switch" role="group" aria-label="Choose focus">
+          <button class="focus-button active" data-scope="class" aria-pressed="true">
+            <span class="focus-icon" aria-hidden="true">▦</span>
+            <span><strong>My class</strong><small>See shared patterns</small></span>
+          </button>
+          <button class="focus-button" data-scope="student" aria-pressed="false">
+            <span class="focus-icon" aria-hidden="true">◎</span>
+            <span><strong>A student</strong><small>Explore one learner</small></span>
+          </button>
+        </div>
+      </section>
+
+      <section class="selection-panel" aria-label="Choose class and student">
+        <label>
+          <span>Class</span>
+          <select id="class-select" aria-label="Select a class"></select>
+        </label>
+        <label id="student-field" class="hidden">
+          <span>Student</span>
+          <select id="student-select" aria-label="Select a student"></select>
+        </label>
+        <p class="selection-note">Names are synthetic. Summaries use historical ASSISTments practice interactions.</p>
+      </section>
+
+      <div id="loading" class="loading-state" role="status">Preparing the learning summary…</div>
+      <div id="error" class="error-state hidden" role="alert"></div>
+
+      <section id="workspace" class="workspace hidden">
+        <div class="dashboard-column">
+          <section class="summary-heading">
+            <div>
+              <p id="context-label" class="kicker"></p>
+              <h2 id="entity-label"></h2>
+              <p id="summary-eyebrow"></p>
+            </div>
+            <div class="headline-card">
+              <span>Suggested starting point</span>
+              <strong id="headline"></strong>
+            </div>
+          </section>
+
+          <section id="metric-grid" class="metric-grid" aria-label="Summary metrics"></section>
+
+          <section class="chart-grid">
+            <article class="panel">
+              <div class="panel-heading">
+                <div><p class="kicker">Recent view</p><h3>Performance by skill</h3></div>
+                <span class="info-tip" title="First-attempt success across recent recorded interactions.">i</span>
+              </div>
+              <div id="skill-chart" class="skill-chart"></div>
+            </article>
+
+            <article class="panel">
+              <div class="panel-heading">
+                <div><p class="kicker">Earlier → recent</p><h3>Learning activity trend</h3></div>
+                <span class="info-tip" title="Ordered interaction groups, not calendar weeks.">i</span>
+              </div>
+              <div id="trend-chart" class="trend-chart"></div>
+              <div class="trend-axis"><span>Earlier interactions</span><span>Recent interactions</span></div>
+            </article>
+          </section>
+
+          <details class="evidence-panel">
+            <summary>How was this summary created?</summary>
+            <ul id="dashboard-evidence"></ul>
+            <p>These model estimates and descriptive patterns support teacher observation. They are not measures of intelligence, motivation, disability, or mastery.</p>
+          </details>
+        </div>
+
+        <aside class="chat-panel" aria-label="Ask Teacher Support Studio">
+          <div class="chat-heading">
+            <div class="assistant-avatar" aria-hidden="true">✦</div>
+            <div><h2>Ask the studio</h2><p>Questions stay grounded in the selected view.</p></div>
+          </div>
+          <div id="suggested-questions" class="question-chips"></div>
+          <div id="messages" class="messages" aria-live="polite">
+            <div class="assistant-message intro-message">
+              <p>Choose a question above or ask about a pattern you see in the summary.</p>
+            </div>
+          </div>
+          <form id="chat-form" class="chat-form">
+            <label for="question-input" class="sr-only">Ask a question</label>
+            <textarea id="question-input" maxlength="500" rows="2" placeholder="Ask about this class…" required></textarea>
+            <button type="submit" aria-label="Send question">Send <span aria-hidden="true">→</span></button>
+          </form>
+          <p class="chat-disclaimer">Suggestions support—not replace—teacher judgment.</p>
+        </aside>
+      </section>
+    </main>
+
+    <footer>
+      <span>Teacher Support Studio · Portfolio demonstration</span>
+      <a href="/docs">Explore the API</a>
+    </footer>
+    <script src="/static/app.js" defer></script>
+  </body>
+</html>
