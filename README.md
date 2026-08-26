@@ -160,6 +160,24 @@ at `http://127.0.0.1:8000/docs`. To enable live OpenAI responses, copy
 `.env_example` to `.env`, add a scoped API key, and load those environment
 variables before starting the server.
 
+### Render deployment bundle
+
+A self-contained reviewer deployment is available under `deployment/render/`.
+It contains a generated copy of the application, the XGBoost serving artifact,
+the editable demo mappings, and only the rows needed by enabled demo classes
+and students. The full local datasets and notebook workflow remain unchanged.
+
+Refresh the bundle after changing the application, model, mappings, or demo
+selection:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\build_render_bundle.py
+```
+
+See `deployment/render/README.md` for the Render Blueprint setup. The hosted
+application works without an OpenAI API key by using its deterministic guided
+response path.
+
 Notebook 04 exports its complete preprocessing and logistic-regression pipeline
 to `models/logistic_regression/`. Notebook 05 exports the portable native model
 and serving metadata used by the app to `models/xgboost/`. Re-executing either

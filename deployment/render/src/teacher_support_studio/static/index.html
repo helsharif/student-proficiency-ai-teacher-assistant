@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Teacher-facing learning analytics and grounded support assistant." />
+    <title>Teacher Support Studio</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2224%22 fill=%22%23176f6a%22/><text x=%2250%22 y=%2264%22 text-anchor=%22middle%22 font-size=%2242%22 font-family=%22Arial%22 font-weight=%22700%22 fill=%22white%22>TS</text></svg>" />
+    <link rel="stylesheet" href="/static/styles.css?v=readme-screenshots-7" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="Teacher Support Studio home">
+        <span class="brand-mark" aria-hidden="true">TS</span>
+        <span>
+          <strong>Teacher Support Studio</strong>
+          <small>Notice patterns. Plan the next step.</small>
+        </span>
+      </a>
+      <div class="demo-badge"><span></span> Local demo · Deidentified data</div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div>
+          <p class="kicker">Teacher-guided learning support</p>
+          <h1>Choose a student to review readiness and plan support</h1>
+          <p class="hero-copy">Estimate readiness across plausible next-practice scenarios, then ask for practical next steps.</p>
+        </div>
+      </section>
+
+      <section class="selection-panel" aria-label="Choose class and student">
+        <label>
+          <span>Class</span>
+          <select id="class-select" aria-label="Select a class"></select>
+        </label>
+        <label id="student-field">
+          <span>Student</span>
+          <select id="student-select" aria-label="Select a student"></select>
+        </label>
+        <p class="selection-note">Names are synthetic. Readiness estimates use historical ASSISTments practice interactions and plausible next-practice scenarios.</p>
+      </section>
+
+      <div id="loading" class="loading-state" role="status">Preparing the learning summary…</div>
+      <div id="error" class="error-state hidden" role="alert"></div>
+
+      <section id="workspace" class="workspace hidden">
+        <div class="dashboard-column">
+          <section class="summary-heading">
+            <div>
+              <p id="context-label" class="kicker"></p>
+              <h2 id="entity-label"></h2>
+              <div class="headline-card">
+                <span>Suggested starting point</span>
+                <strong id="headline"></strong>
+              </div>
+            </div>
+          </section>
+
+          <section id="metric-grid" class="metric-grid" aria-label="Summary metrics"></section>
+
+          <section class="chart-grid">
+            <article class="panel readiness-panel">
+              <div class="panel-heading">
+                <div>
+                  <p class="kicker">Plausible next practice</p>
+                  <h3>Estimated readiness by skill</h3>
+                  <p id="readiness-copy" class="panel-copy"></p>
+                </div>
+                <span class="info-tip" title="Median XGBoost estimate across up to ten historically observed question contexts for each skill.">i</span>
+              </div>
+              <div id="skill-chart" class="skill-chart"></div>
+            </article>
+          </section>
+
+          <details class="evidence-panel">
+            <summary>How was this summary created?</summary>
+            <ul id="dashboard-evidence"></ul>
+            <p>Readiness estimates are planning signals for plausible next practice. They are not measures of intelligence, motivation, disability, or mastery.</p>
+          </details>
+        </div>
+
+        <aside class="chat-panel" aria-label="Ask Teacher Support Studio">
+          <div class="chat-heading">
+            <div class="assistant-avatar" aria-hidden="true">✦</div>
+            <div><h2>Ask the studio</h2><p>Questions stay grounded in the selected view.</p></div>
+          </div>
+          <div id="suggested-questions" class="question-chips"></div>
+          <div id="messages" class="messages" aria-live="polite">
+            <div class="assistant-message intro-message">
+              <p>Choose a question above or ask about a pattern you see in the summary.</p>
+            </div>
+          </div>
+          <form id="chat-form" class="chat-form">
+            <label for="question-input" class="sr-only">Ask a question</label>
+            <textarea id="question-input" maxlength="500" rows="2" placeholder="Ask about this class…" required></textarea>
+            <button type="submit" aria-label="Send question">Send <span aria-hidden="true">→</span></button>
+          </form>
+          <p class="chat-disclaimer">Suggestions support—not replace—teacher judgment.</p>
+        </aside>
+      </section>
+    </main>
+
+    <footer>
+      <span>Teacher Support Studio · Portfolio demonstration</span>
+      <a href="/docs">Explore the API</a>
+    </footer>
+    <script src="/static/app.js?v=readme-screenshots-8" defer></script>
+  </body>
+</html>
