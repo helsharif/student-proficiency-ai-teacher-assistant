@@ -158,7 +158,6 @@ class AnalyticsService:
             entity_id=class_id,
             entity_label=self.names.class_label(class_id),
             context_label="Class focus",
-            eyebrow="A concise view of recent learning activity",
             headline=f"Start with {priority_text}",
             cards=[
                 MetricCard(
@@ -226,7 +225,6 @@ class AnalyticsService:
             entity_id=student_id,
             entity_label=label,
             context_label=f"Student focus · {self.names.class_label(class_id)}",
-            eyebrow="A pattern to explore, not a mastery judgment",
             headline=f"Take a closer look at {focus_text}",
             cards=[
                 MetricCard(

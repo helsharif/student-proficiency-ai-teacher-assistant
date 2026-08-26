@@ -37,7 +37,6 @@ class DashboardSummary(BaseModel):
     entity_id: int
     entity_label: str
     context_label: str
-    eyebrow: str
     headline: str
     cards: list[MetricCard]
     skills: list[SkillMetric]

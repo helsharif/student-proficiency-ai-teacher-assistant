@@ -92,7 +92,6 @@ async function refreshSummary() {
 function renderSummary(summary) {
   $("#context-label").textContent = summary.context_label;
   $("#entity-label").textContent = summary.entity_label;
-  $("#summary-eyebrow").textContent = summary.eyebrow;
   $("#headline").textContent = summary.headline;
   elements.input.placeholder = summary.scope === "class" ? "Ask about this class…" : "Ask about this student…";
 
