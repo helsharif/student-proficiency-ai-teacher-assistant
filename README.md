@@ -6,6 +6,8 @@ The project combines leakage-safe longitudinal feature engineering, interpretabl
 
 > Core focus: Educational data science, probability estimation, explainable machine learning, responsible AI, and teacher-facing application engineering.
 
+**Live demo:** [teacher-support-studio.onrender.com](https://teacher-support-studio.onrender.com)
+
 ![Teacher Support Studio overview](graphics/teacher_support_studio_overview.png)
 
 ---
@@ -108,6 +110,8 @@ The selected threshold is an experimental operating point, not a validated educa
 ## Teacher Support Studio
 
 Teacher Support Studio is a locally runnable FastAPI application that lets a teacher select a synthetic class and student, review estimated readiness across named skills, and ask questions grounded in the displayed evidence.
+
+Try the deployed application at [teacher-support-studio.onrender.com](https://teacher-support-studio.onrender.com).
 
 For each skill, the application reconstructs the student's state from all prior interactions, creates up to ten plausible next-practice contexts that occurred in the selected class, and batch-scores those scenarios with the persisted XGBoost model.
 
