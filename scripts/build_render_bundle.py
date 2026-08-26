@@ -22,6 +22,8 @@ SOURCE_DICTIONARY = (
 )
 SOURCE_MODEL_DIR = PROJECT_ROOT / "models" / "xgboost"
 SOURCE_MAPPING_DIR = PROJECT_ROOT / "outputs" / "teacher_support_studio"
+LOCAL_DEMO_BADGE = "Local demo · Deidentified data"
+LIVE_DEMO_BADGE = "Live demo · Deidentified data"
 
 BASE_DATA_COLUMNS = [
     "student_class_id",
@@ -77,6 +79,16 @@ def _copy_runtime_files() -> None:
         package_target,
         dirs_exist_ok=True,
         ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
+    )
+    deployment_index = package_target / "static" / "index.html"
+    index_html = deployment_index.read_text(encoding="utf-8")
+    if index_html.count(LOCAL_DEMO_BADGE) != 1:
+        raise RuntimeError(
+            f"Expected exactly one local demo badge in {deployment_index}."
+        )
+    deployment_index.write_text(
+        index_html.replace(LOCAL_DEMO_BADGE, LIVE_DEMO_BADGE),
+        encoding="utf-8",
     )
 
     dictionary_target = DEPLOYMENT_ROOT / "data" / "data_dictionary"
