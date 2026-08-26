@@ -1,202 +1,298 @@
 # Student Proficiency Prediction & AI Teacher Assistant
 
-An end-to-end educational data science project that uses longitudinal
-ASSISTments practice data to predict a student's probability of first-attempt
-success on upcoming skill practice.
+End-to-end educational machine learning project that predicts a student's probability of first-attempt success on upcoming skill practice and turns those estimates into teacher-facing, evidence-grounded guidance.
 
-The project compares an interpretable logistic regression baseline with
-XGBoost, evaluates probability quality and calibration, and uses model-native
-SHAP contributions to explain individual XGBoost predictions. The longer-term
-goal is to feed student- and class-level analytics into a grounded teacher
-assistant that translates structured evidence into teacher-friendly language.
+The project combines leakage-safe longitudinal feature engineering, interpretable and nonlinear classification models, SHAP explanations, and a deployable FastAPI application called **Teacher Support Studio**.
 
-## Project goals
+> Core focus: Educational data science, probability estimation, explainable machine learning, responsible AI, and teacher-facing application engineering.
 
-- Engineer leakage-safe features using only information available before each
-  predicted interaction.
-- Compare predictive performance, calibration, interpretability, and practical
-  intervention thresholds.
-- Produce student-skill proficiency profiles and class-level analytics.
-- Build a teacher-facing dashboard and evidence-grounded AI assistant.
-- Keep educators responsible for instructional decisions and document the
-  system's limitations and intended use.
+![Teacher Support Studio overview](graphics/teacher_support_studio_overview.png)
 
-## Data
+---
 
-The project uses the
-[ASSISTments 2009–2010 Skill Builder dataset](https://sites.google.com/site/assistmentsdata/home/2009-2010-assistment-data/skill-builder-data-2009-2010).
-Raw and processed CSV datasets are versioned with Git LFS. The repository also
-includes project-specific data dictionaries under `data/data_dictionary/`.
+## Project Highlights
 
-After filtering to original problems with a valid skill identifier, the
-modeling dataset contains 259,386 interactions from 4,163 students. First-attempt
-correctness is 65.8%; the median student has 19 interactions, while the median
-student-skill history contains five interactions.
+- **Task:** Binary classification of first-attempt correctness on the next student-skill interaction
+- **Data:** 259,386 filtered interactions from 4,163 students in the ASSISTments 2009–2010 Skill Builder dataset
+- **Features:** 170 documented predictors constructed only from information available before each prediction
+- **Models:** L2-regularized logistic regression and tuned XGBoost
+- **Best test ROC-AUC:** 0.7000 with XGBoost
+- **Explainability:** Global feature importance and model-native local SHAP contributions
+- **Application:** FastAPI teacher dashboard with student-skill readiness estimates and a LangGraph-powered assistant
+- **Responsible-use design:** Evidence minimums, deidentified data, explicit uncertainty language, and human decision-making retained by educators
 
-## Latest findings
+---
 
-The current evaluation uses a global chronological split by `order_id`: the
-earliest 70% of unique order identifiers for training, the next 15% for
-validation, and the latest 15% for testing. All longitudinal predictors are
-shifted so that a prediction for interaction `t` uses only information available
-before `t`.
+## Motivation and Problem Statement
 
-| Model | Test ROC-AUC | Test average precision | Test log loss | Test Brier score | Balanced accuracy at validation-selected threshold |
+Student practice histories contain signals about recent performance, prior opportunities, help seeking, and skill-specific learning patterns. Used carefully, those signals can help a teacher decide where a low-stakes check-in may be useful.
+
+The machine learning objective is to estimate:
+
+> What is the probability that a student answers the next skill-practice interaction correctly on the first attempt?
+
+The application objective is to present that evidence in language that supports teacher review without turning a model score into a mastery label, placement decision, or automated intervention.
+
+---
+
+## Dataset Description
+
+This project uses the [ASSISTments 2009–2010 Skill Builder dataset](https://sites.google.com/site/assistmentsdata/home/2009-2010-assistment-data/skill-builder-data-2009-2010). Raw and processed CSV files are tracked with Git LFS, and project-specific data dictionaries are stored under `data/data_dictionary/`.
+
+After filtering to original problems with a valid skill identifier, the modeling dataset contains:
+
+| Dataset characteristic | Value |
+| --- | ---: |
+| Interactions | 259,386 |
+| Students | 4,163 |
+| First-attempt correctness | 65.8% |
+| Median interactions per student | 19 |
+| Median interactions per student-skill history | 5 |
+
+### Leakage Controls
+
+The prediction row for interaction `t` uses only information available before `t`:
+
+- Longitudinal student and skill features are shifted before modeling.
+- Train, validation, and test sets follow a global chronological split by `order_id`.
+- Model thresholds are selected on validation data, not the test set.
+- Logistic regression and XGBoost use the same 170 predictors and held-out evaluation protocol.
+- The test window is reserved for final evaluation after model development.
+
+---
+
+## Modeling Workflow
+
+The workflow is organized into five notebooks:
+
+1. `01_data_quality_and_filtering.ipynb` — validate, document, and filter the source data
+2. `02_eda_learning_patterns.ipynb` — examine student, skill, practice, and help-seeking patterns
+3. `03_feature_engineering.ipynb` — generate leakage-safe longitudinal predictors and chronological exports
+4. `04_logistic_regression_baseline.ipynb` — train the interpretable baseline and export its full preprocessing pipeline
+5. `05_xgboost_model.ipynb` — tune and evaluate XGBoost, generate explanations, and export the serving artifact
+
+### Time-Aware Evaluation Split
+
+Unique `order_id` values are divided chronologically:
+
+| Split | Chronological share | Observed correctness | Purpose |
+| --- | ---: | ---: | --- |
+| Train | Earliest 70% | 65.6% | Fit model parameters |
+| Validation | Next 15% | 60.9% | Select model settings and operating threshold |
+| Test | Latest 15% | 71.7% | Final held-out evaluation |
+
+The changing outcome rates make temporal and population shift an important part of interpreting the final scores.
+
+---
+
+## Model Results
+
+| Model | Test ROC-AUC | Test average precision | Test log loss | Test Brier score | Balanced accuracy |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | Logistic regression | 0.6746 | 0.8251 | 0.5565 | 0.1864 | 0.6121 at 0.590 |
-| XGBoost | **0.7000** | **0.8454** | **0.5443** | **0.1823** | **0.6317 at 0.635** |
+| **XGBoost** | **0.7000** | **0.8454** | **0.5443** | **0.1823** | **0.6317 at 0.635** |
 | Development-prevalence baseline | 0.5000 | 0.7169 | 0.6068 | 0.2078 | 0.5000 |
 
-Key results:
+### Key Findings
 
-- XGBoost provides a modest but consistent improvement over logistic regression
-  on discrimination and probability-error metrics.
-- Recent student-skill performance is the strongest nonlinear signal. XGBoost's
-  leading gain feature is mean skill accuracy over the prior five relevant
-  interactions; student prior accuracy, skill practice history, recent skill
-  accuracy, streaks, and historical help seeking are also influential in SHAP
-  explanations.
-- The validation-selected XGBoost threshold favors a more even tradeoff between
-  recognizing correct and incorrect outcomes than the default 0.50 threshold.
-  It is an experimental operating point, not a validated educational cutoff.
-- Results show temporal and population shift: training, validation, and test
-  correctness rates are 65.6%, 60.9%, and 71.7%, respectively, and the final
-  test window contains 38,909 interactions but only 87 students. The test result
-  therefore should not be treated as evidence of broad student generalization.
+- XGBoost provides a modest but consistent improvement over logistic regression on discrimination and probability-error metrics.
+- Recent student-skill performance is the strongest nonlinear signal. The leading XGBoost gain feature is mean skill accuracy over the prior five relevant interactions.
+- Student prior accuracy, skill practice history, recent skill accuracy, streaks, and historical help seeking also contribute to predictions and SHAP explanations.
+- The validation-selected XGBoost threshold produces a more balanced tradeoff between recognizing correct and incorrect outcomes than the default 0.50 threshold.
+- The final test window contains 38,909 interactions but only 87 students, so the results should not be interpreted as broad evidence of unseen-student generalization.
 
-## Current status
+The selected threshold is an experimental operating point, not a validated educational cutoff.
 
-Completed work includes data-quality analysis, educational EDA, leakage-safe
-longitudinal feature engineering, chronological dataset exports, an
-L2-regularized logistic regression baseline, and a tuned XGBoost comparison with
-global and local explanations. Both models use the same 170 documented
-predictors and held-out evaluation protocol.
-
-Next steps are subgroup and temporal-stability audits, student-clustered
-uncertainty intervals, probability recalibration if needed, and an evaluation
-split designed explicitly for unseen-student generalization. A functioning
-local teacher-support application and persisted deployment artifacts are now
-available; production monitoring remains future work.
+---
 
 ## Teacher Support Studio
 
-The repository includes a locally runnable first draft of **Teacher Support
-Studio**, a FastAPI application that lets a teacher select a student, review
-estimated readiness across named skills, and ask contextual questions. For each
-skill, the app reconstructs the learner's state from all prior interactions,
-creates up to ten next-practice contexts that actually occurred in the
-selected class, and batch-scores them with the XGBoost artifact exported by
-notebook 05. The display uses synthetic names over authentic deidentified class
-groupings. The logistic-regression artifact remains available as a
-deployment-ready benchmark but is not used by the app.
+Teacher Support Studio is a locally runnable FastAPI application that lets a teacher select a synthetic class and student, review estimated readiness across named skills, and ask questions grounded in the displayed evidence.
 
-The readiness view deliberately excludes skills with fewer than five prior
-learner interactions. It then displays the five highest and five lowest median
-XGBoost estimates among skills with sufficient evidence. This threshold is a
-portfolio-demo evidence rule, not a validated educational cutoff. The estimates
-support low-stakes teacher review and are not mastery classifications.
+For each skill, the application reconstructs the student's state from all prior interactions, creates up to ten plausible next-practice contexts that occurred in the selected class, and batch-scores those scenarios with the persisted XGBoost model.
+
+### Readiness Workflow
+
+1. The teacher selects a synthetic class and student name mapped to authentic deidentified identifiers.
+2. The application retrieves the student's complete recorded interaction history.
+3. It constructs up to ten historically observed question contexts for each named skill.
+4. The persisted XGBoost model scores the scenarios, and their median probability becomes the skill's estimated readiness.
+5. Skills with fewer than five prior learner interactions are excluded before the five highest and five lowest readiness estimates are selected.
+6. A LangGraph workflow gives OpenAI only the selected metrics and supporting evidence for a structured response. If OpenAI is unavailable, the endpoint returns deterministic local guidance.
 
 ![Teacher Support Studio readiness dashboard](docs/images/teacher-support-studio-dashboard.png)
 
-### Prediction and guidance workflow
+### Grounded Teacher Assistant
 
-1. The teacher selects a synthetic class and student name mapped to authentic
-   deidentified identifiers.
-2. The application retrieves the student's complete recorded interaction
-   history, including activity outside the currently selected class.
-3. For each named skill, it constructs up to ten historically observed question
-   contexts using supported answer formats and problem metadata.
-4. The persisted XGBoost model scores all scenarios in one batch. The median
-   probability becomes the skill's estimated readiness.
-5. Skills with fewer than five learner interactions are excluded before the top
-   and bottom readiness groups are selected.
-6. A LangGraph workflow sends only the selected metrics and supporting evidence
-   to OpenAI for a structured, teacher-friendly response. If OpenAI is
-   unavailable, the same endpoint returns a deterministic local response.
+The assistant answers preloaded or free-form questions using three predictable sections: what the model suggests, a low-stakes action the teacher might try, and limitations to keep in mind.
 
-### Grounded teacher assistant
+**Example: identifying the first skill to review**
 
-The question panel includes preloaded prompts aligned with the selected student
-view. Responses are constrained to the supplied readiness evidence and use
-three predictable sections: what the model suggests, a low-stakes action the
-teacher might try, and limitations to keep in mind. The examples below were
-captured from live OpenAI responses; wording can vary between runs.
+![Teacher Support Studio priority response](docs/images/teacher-support-studio-llm-priority-response.png)
 
-**Preloaded question: “Which skill should I check first, and why?”**
+**Example: explaining the evidence threshold**
 
-![Teacher Support Studio OpenAI priority response](docs/images/teacher-support-studio-llm-priority-response.png)
+![Teacher Support Studio evidence-threshold response](docs/images/teacher-support-studio-llm-evidence-response.png)
 
-**Preloaded question: “Why were some practiced skills excluded?”**
+### Editable Demo Mappings
 
-![Teacher Support Studio OpenAI evidence-threshold response](docs/images/teacher-support-studio-llm-evidence-response.png)
+Synthetic display names are mapped to deidentified `class_id` and `student_id` values in `outputs/teacher_support_studio/teacher_support_name_mapping.xlsx`. Update a name or its `include_in_demo` setting, save the workbook, and refresh the app.
 
-### Editable demo mappings
+Skill emoji bullets are controlled by `outputs/teacher_support_studio/skill_emoji_mapping.xlsx`. Both workbooks are reloaded automatically after a saved file changes.
 
-Synthetic display names are mapped to real deidentified `class_id` and
-`student_id` values in
-`outputs/teacher_support_studio/teacher_support_name_mapping.xlsx`. Edit a name
-or the `include_in_demo` setting, save the workbook, and refresh the app. The
-mapping is reloaded automatically after the saved file changes.
+---
 
-Skill emoji bullets are similarly controlled by
-`outputs/teacher_support_studio/skill_emoji_mapping.xlsx`. Edit an emoji while
-keeping its skill name unchanged, save the workbook, and refresh the app. The
-FastAPI mapping endpoint reloads the saved workbook automatically.
+## Application Architecture
 
-### Run locally
+```text
+ASSISTments history
+        |
+        v
+Leakage-safe learner state + historically observed next-practice contexts
+        |
+        v
+Persisted XGBoost model ---> Skill readiness summaries
+                                      |
+                                      v
+                         Teacher Support Studio UI
+                                      |
+                          +-----------+-----------+
+                          |                       |
+                          v                       v
+              Deterministic guidance     LangGraph + OpenAI
+```
 
-Without an OpenAI API key, the app returns deterministic guided responses so
-the full experience remains usable. With `OPENAI_API_KEY` configured, a
-LangGraph workflow uses OpenAI to generate a structured response grounded in
-the displayed evidence.
+The OpenAI path is optional. Readiness scoring and deterministic teacher guidance remain available without an API key.
+
+---
+
+## Technologies
+
+- **Data and modeling:** Python 3.13, pandas, NumPy, SciPy, scikit-learn, XGBoost
+- **Interpretability and visualization:** XGBoost model-native SHAP contributions, Plotly, Kaleido
+- **Application:** FastAPI, Uvicorn, Pydantic, JavaScript, HTML, CSS
+- **Generative AI:** LangGraph, LangChain, OpenAI
+- **Reproducibility and quality:** uv, JupyterLab, pytest, Ruff, Git LFS
+- **Deployment:** Render Blueprint with a self-contained reviewer bundle
+
+---
+
+## Repository Structure
+
+```text
+.
+├── data/                       # Raw, processed, and data-dictionary assets
+├── deployment/render/          # Self-contained Render deployment bundle
+├── docs/images/                # Application screenshots
+├── graphics/                   # Portfolio overview graphics
+├── models/                     # Persisted logistic regression and XGBoost artifacts
+├── notebooks/                  # Ordered analysis and modeling workflow
+├── outputs/                    # Editable Teacher Support Studio mappings
+├── scripts/                    # Deployment-bundle and notebook export utilities
+├── src/teacher_support_studio/ # FastAPI app, analytics, model, and assistant logic
+├── tests/                      # Analytics and application tests
+├── .env_example                # Optional local OpenAI configuration template
+├── pyproject.toml              # Project metadata and dependencies
+├── uv.lock                     # Reproducible dependency lockfile
+└── README.md
+```
+
+---
+
+## How to Run Locally
+
+### 1. Clone the repository and pull Git LFS assets
+
+```powershell
+git lfs install
+git clone https://github.com/helsharif/teacher-support-studio.git
+cd teacher-support-studio
+git lfs pull
+```
+
+### 2. Install the environment
 
 ```powershell
 uv sync
+```
+
+### 3. Configure optional OpenAI responses
+
+The complete application works without an OpenAI API key by using deterministic guided responses. To enable live grounded responses:
+
+```powershell
+Copy-Item .env_example .env
+```
+
+Add a scoped `OPENAI_API_KEY` to `.env`. Never commit the populated `.env` file.
+
+### 4. Start Teacher Support Studio
+
+```powershell
 uv run uvicorn teacher_support_studio.main:app --app-dir src --reload
 ```
 
-Then open `http://127.0.0.1:8000`. Interactive API documentation is available
-at `http://127.0.0.1:8000/docs`. To enable live OpenAI responses, copy
-`.env_example` to `.env`, add a scoped API key, and load those environment
-variables before starting the server.
+Open `http://127.0.0.1:8000`. Interactive API documentation is available at `http://127.0.0.1:8000/docs`.
 
-### Render deployment bundle
-
-A self-contained reviewer deployment is available under `deployment/render/`.
-It contains a generated copy of the application, the XGBoost serving artifact,
-the editable demo mappings, and only the rows needed by enabled demo classes
-and students. The full local datasets and notebook workflow remain unchanged.
-
-Refresh the bundle after changing the application, model, mappings, or demo
-selection:
+### 5. Run tests and lint checks
 
 ```powershell
-.\.venv\Scripts\python.exe scripts\build_render_bundle.py
+uv run pytest
+uv run ruff check .
 ```
 
-See `deployment/render/README.md` for the Render Blueprint setup. The hosted
-application works without an OpenAI API key by using its deterministic guided
-response path.
+---
 
-Notebook 04 exports its complete preprocessing and logistic-regression pipeline
-to `models/logistic_regression/`. Notebook 05 exports the portable native model
-and serving metadata used by the app to `models/xgboost/`. Re-executing either
-notebook refreshes its corresponding bundle.
+## Reproduce the Analysis
 
-## Reproduce the analysis
+After installing the environment and pulling the Git LFS data, run the notebooks in numerical order:
 
-Install the environment from `pyproject.toml` and `uv.lock`, then run the
-notebooks in order:
+```text
+notebooks/01_data_quality_and_filtering.ipynb
+notebooks/02_eda_learning_patterns.ipynb
+notebooks/03_feature_engineering.ipynb
+notebooks/04_logistic_regression_baseline.ipynb
+notebooks/05_xgboost_model.ipynb
+```
 
-1. `01_data_quality_and_filtering.ipynb`
-2. `02_eda_learning_patterns.ipynb`
-3. `03_feature_engineering.ipynb`
-4. `04_logistic_regression_baseline.ipynb`
-5. `05_xgboost_model.ipynb`
+Notebook 04 refreshes the complete logistic-regression preprocessing and model bundle under `models/logistic_regression/`. Notebook 05 refreshes the native XGBoost serving artifact and metadata under `models/xgboost/`.
 
-## Responsible use
+To rebuild the self-contained Render bundle after changing the application, model, mappings, or demo selection:
 
-This project is a demonstration of teacher-facing decision support. Its outputs
-are not measures of intelligence, general ability, motivation, disability, or
-psychological mastery, and should not automatically determine grading,
-placement, or interventions.
+```powershell
+uv run python scripts/build_render_bundle.py
+```
+
+See `deployment/render/README.md` for the Render Blueprint setup.
+
+---
+
+## Current Status and Roadmap
+
+Completed work includes data-quality analysis, educational EDA, leakage-safe feature engineering, chronological dataset exports, model comparison, XGBoost explanations, persisted serving artifacts, automated tests, and a working teacher-support application.
+
+Planned extensions:
+
+- Subgroup and temporal-stability audits
+- Student-clustered uncertainty intervals
+- Probability recalibration if diagnostics show it is needed
+- Evaluation designed specifically for unseen-student generalization
+- Production monitoring and expanded application observability
+
+---
+
+## Responsible Use and Limitations
+
+This project is a portfolio demonstration of teacher-facing decision support. Its outputs are planning signals for plausible next practice, not measures of intelligence, general ability, motivation, disability, or psychological mastery.
+
+- Do not use predictions to automatically determine grading, placement, access, or interventions.
+- Treat the five-interaction minimum as a portfolio-demo evidence rule, not a validated educational standard.
+- Interpret results in light of the temporal and population shift in the held-out data.
+- Validate model behavior, calibration, subgroup performance, and instructional impact before any real educational use.
+- Keep educators responsible for contextual interpretation and final decisions.
+
+---
+
+## Author
+
+**Husayn El Sharif** — Senior Data Scientist / Machine Learning Engineer
