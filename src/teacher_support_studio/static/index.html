@@ -6,7 +6,7 @@
     <meta name="description" content="Teacher-facing learning analytics and grounded support assistant." />
     <title>Teacher Support Studio</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2224%22 fill=%22%23176f6a%22/><text x=%2250%22 y=%2264%22 text-anchor=%22middle%22 font-size=%2242%22 font-family=%22Arial%22 font-weight=%22700%22 fill=%22white%22>TS</text></svg>" />
-    <link rel="stylesheet" href="/static/styles.css" />
+    <link rel="stylesheet" href="/static/styles.css?v=readme-screenshots-7" />
   </head>
   <body>
     <header class="topbar">
@@ -24,18 +24,8 @@
       <section class="hero">
         <div>
           <p class="kicker">Teacher-guided learning support</p>
-          <h1>What would you like to focus on?</h1>
-          <p class="hero-copy">Choose a class or a student, review recent learning patterns, and ask for practical next steps.</p>
-        </div>
-        <div class="focus-switch" role="group" aria-label="Choose focus">
-          <button class="focus-button active" data-scope="class" aria-pressed="true">
-            <span class="focus-icon" aria-hidden="true">▦</span>
-            <span><strong>My class</strong><small>See shared patterns</small></span>
-          </button>
-          <button class="focus-button" data-scope="student" aria-pressed="false">
-            <span class="focus-icon" aria-hidden="true">◎</span>
-            <span><strong>A student</strong><small>Explore one learner</small></span>
-          </button>
+          <h1>Choose a student to review readiness and plan support</h1>
+          <p class="hero-copy">Estimate readiness across plausible next-practice scenarios, then ask for practical next steps.</p>
         </div>
       </section>
 
@@ -44,11 +34,11 @@
           <span>Class</span>
           <select id="class-select" aria-label="Select a class"></select>
         </label>
-        <label id="student-field" class="hidden">
+        <label id="student-field">
           <span>Student</span>
           <select id="student-select" aria-label="Select a student"></select>
         </label>
-        <p class="selection-note">Names are synthetic. Summaries use historical ASSISTments practice interactions.</p>
+        <p class="selection-note">Names are synthetic. Readiness estimates use historical ASSISTments practice interactions and plausible next-practice scenarios.</p>
       </section>
 
       <div id="loading" class="loading-state" role="status">Preparing the learning summary…</div>
@@ -60,38 +50,33 @@
             <div>
               <p id="context-label" class="kicker"></p>
               <h2 id="entity-label"></h2>
-            </div>
-            <div class="headline-card">
-              <span>Suggested starting point</span>
-              <strong id="headline"></strong>
+              <div class="headline-card">
+                <span>Suggested starting point</span>
+                <strong id="headline"></strong>
+              </div>
             </div>
           </section>
 
           <section id="metric-grid" class="metric-grid" aria-label="Summary metrics"></section>
 
           <section class="chart-grid">
-            <article class="panel">
+            <article class="panel readiness-panel">
               <div class="panel-heading">
-                <div><p class="kicker">Recent view</p><h3>Performance by skill</h3></div>
-                <span class="info-tip" title="First-attempt success across recent recorded interactions.">i</span>
+                <div>
+                  <p class="kicker">Plausible next practice</p>
+                  <h3>Estimated readiness by skill</h3>
+                  <p id="readiness-copy" class="panel-copy"></p>
+                </div>
+                <span class="info-tip" title="Median XGBoost estimate across up to ten historically observed question contexts for each skill.">i</span>
               </div>
               <div id="skill-chart" class="skill-chart"></div>
-            </article>
-
-            <article class="panel">
-              <div class="panel-heading">
-                <div><p class="kicker">Earlier → recent</p><h3>Learning activity trend</h3></div>
-                <span class="info-tip" title="Ordered interaction groups, not calendar weeks.">i</span>
-              </div>
-              <div id="trend-chart" class="trend-chart"></div>
-              <div class="trend-axis"><span>Earlier interactions</span><span>Recent interactions</span></div>
             </article>
           </section>
 
           <details class="evidence-panel">
             <summary>How was this summary created?</summary>
             <ul id="dashboard-evidence"></ul>
-            <p>These model estimates and descriptive patterns support teacher observation. They are not measures of intelligence, motivation, disability, or mastery.</p>
+            <p>Readiness estimates are planning signals for plausible next practice. They are not measures of intelligence, motivation, disability, or mastery.</p>
           </details>
         </div>
 
@@ -120,6 +105,6 @@
       <span>Teacher Support Studio · Portfolio demonstration</span>
       <a href="/docs">Explore the API</a>
     </footer>
-    <script src="/static/app.js" defer></script>
+    <script src="/static/app.js?v=readme-screenshots-8" defer></script>
   </body>
 </html>

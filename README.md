@@ -74,19 +74,63 @@ predictors and held-out evaluation protocol.
 
 Next steps are subgroup and temporal-stability audits, student-clustered
 uncertainty intervals, probability recalibration if needed, and an evaluation
-split designed explicitly for unseen-student generalization. A first local
-teacher-support application and persisted deployment artifacts are now
+split designed explicitly for unseen-student generalization. A functioning
+local teacher-support application and persisted deployment artifacts are now
 available; production monitoring remains future work.
 
 ## Teacher Support Studio
 
 The repository includes a locally runnable first draft of **Teacher Support
-Studio**, a FastAPI application with class- and student-focused summaries,
-responsive graphics, and a contextual question panel. The display uses
-synthetic names over authentic deidentified class groupings. Its predictive
-cards load the XGBoost artifact exported by notebook 05; the logistic-regression
-artifact remains available as a deployment-ready benchmark but is not used by
-the app.
+Studio**, a FastAPI application that lets a teacher select a student, review
+estimated readiness across named skills, and ask contextual questions. For each
+skill, the app reconstructs the learner's state from all prior interactions,
+creates up to ten next-practice contexts that actually occurred in the
+selected class, and batch-scores them with the XGBoost artifact exported by
+notebook 05. The display uses synthetic names over authentic deidentified class
+groupings. The logistic-regression artifact remains available as a
+deployment-ready benchmark but is not used by the app.
+
+The readiness view deliberately excludes skills with fewer than five prior
+learner interactions. It then displays the five highest and five lowest median
+XGBoost estimates among skills with sufficient evidence. This threshold is a
+portfolio-demo evidence rule, not a validated educational cutoff. The estimates
+support low-stakes teacher review and are not mastery classifications.
+
+![Teacher Support Studio readiness dashboard](docs/images/teacher-support-studio-dashboard.png)
+
+### Prediction and guidance workflow
+
+1. The teacher selects a synthetic class and student name mapped to authentic
+   deidentified identifiers.
+2. The application retrieves the student's complete recorded interaction
+   history, including activity outside the currently selected class.
+3. For each named skill, it constructs up to ten historically observed question
+   contexts using supported answer formats and problem metadata.
+4. The persisted XGBoost model scores all scenarios in one batch. The median
+   probability becomes the skill's estimated readiness.
+5. Skills with fewer than five learner interactions are excluded before the top
+   and bottom readiness groups are selected.
+6. A LangGraph workflow sends only the selected metrics and supporting evidence
+   to OpenAI for a structured, teacher-friendly response. If OpenAI is
+   unavailable, the same endpoint returns a deterministic local response.
+
+### Grounded teacher assistant
+
+The question panel includes preloaded prompts aligned with the selected student
+view. Responses are constrained to the supplied readiness evidence and use
+three predictable sections: what the model suggests, a low-stakes action the
+teacher might try, and limitations to keep in mind. The examples below were
+captured from live OpenAI responses; wording can vary between runs.
+
+**Preloaded question: “Which skill should I check first, and why?”**
+
+![Teacher Support Studio OpenAI priority response](docs/images/teacher-support-studio-llm-priority-response.png)
+
+**Preloaded question: “Why were some practiced skills excluded?”**
+
+![Teacher Support Studio OpenAI evidence-threshold response](docs/images/teacher-support-studio-llm-evidence-response.png)
+
+### Editable demo mappings
 
 Synthetic display names are mapped to real deidentified `class_id` and
 `student_id` values in
@@ -94,12 +138,17 @@ Synthetic display names are mapped to real deidentified `class_id` and
 or the `include_in_demo` setting, save the workbook, and refresh the app. The
 mapping is reloaded automatically after the saved file changes.
 
+Skill emoji bullets are similarly controlled by
+`outputs/teacher_support_studio/skill_emoji_mapping.xlsx`. Edit an emoji while
+keeping its skill name unchanged, save the workbook, and refresh the app. The
+FastAPI mapping endpoint reloads the saved workbook automatically.
+
+### Run locally
+
 Without an OpenAI API key, the app returns deterministic guided responses so
 the full experience remains usable. With `OPENAI_API_KEY` configured, a
 LangGraph workflow uses OpenAI to generate a structured response grounded in
 the displayed evidence.
-
-Run the app locally:
 
 ```powershell
 uv sync

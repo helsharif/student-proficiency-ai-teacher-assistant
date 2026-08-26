@@ -31,6 +31,8 @@ mastery judgment, grade, placement, or mandatory intervention. Describe patterns
 for teacher observation. Keep each section to 1-3 short sentences. Suggested actions must be
 low-stakes, practical, and preserve teacher judgment. If evidence is sparse, say so plainly.
 Do not mention SHAP, thresholds, algorithms, or data-science jargon unless directly asked.
+Express probabilities as rounded whole-number percentages, never raw decimal values.
+Return plain text without Markdown symbols or formatting.
 """
 
 PROHIBITED_PHRASES = (
@@ -92,6 +94,7 @@ class TeacherAssistant:
             "headline": summary.headline,
             "metrics": [card.model_dump() for card in summary.cards],
             "skill_metrics": [skill.model_dump() for skill in summary.skills],
+            "next_practice_readiness": [item.model_dump() for item in summary.readiness],
             "evidence": summary.evidence,
         }
         prompt = (
@@ -133,6 +136,9 @@ class TeacherAssistant:
                 "answer": self._guided_answer(state["request"].question, state["summary"]),
                 "response_mode": "guided",
             }
+        for field in ("what_i_noticed", "what_you_might_try", "what_to_keep_in_mind"):
+            value = getattr(answer, field)
+            setattr(answer, field, value.replace("**", "").replace("`", ""))
         answer.supporting_evidence = state["summary"].evidence[:4]
         return {"answer": answer}
 
@@ -140,6 +146,13 @@ class TeacherAssistant:
     def _guided_answer(question: str, summary: DashboardSummary) -> TeacherAnswer:
         lowered = question.lower()
         skills = summary.skills
+        readiness = summary.readiness
+        readiness_lowest = (
+            min(readiness, key=lambda item: item.estimated_readiness) if readiness else None
+        )
+        readiness_highest = (
+            max(readiness, key=lambda item: item.estimated_readiness) if readiness else None
+        )
         lowest = min(skills, key=lambda item: item.success_rate) if skills else None
         improving = max(
             (skill for skill in skills if skill.change_points is not None),
@@ -147,7 +160,57 @@ class TeacherAssistant:
             default=None,
         )
 
-        if "progress" in lowered or "improv" in lowered:
+        if "excluded" in lowered or "evidence" in lowered:
+            threshold = summary.readiness_min_interactions or 0
+            noticed = (
+                f"A skill must have at least {threshold} prior learner interactions to appear "
+                "in the readiness chart."
+            )
+            action = (
+                "For an excluded skill, gather a few low-stakes responses before using its model "
+                "estimate to plan support."
+            )
+        elif readiness and ("compare" in lowered or "observed" in lowered):
+            with_history = [item for item in readiness if item.historical_success is not None]
+            largest_gap = max(
+                with_history,
+                key=lambda item: abs(item.estimated_readiness - (item.historical_success or 0)),
+                default=None,
+            )
+            noticed = (
+                f"{largest_gap.label} has the largest displayed difference: an estimated "
+                f"{largest_gap.estimated_readiness:.0%} versus "
+                f"{largest_gap.historical_success:.0%} historically observed success."
+                if largest_gap
+                else "There is not enough prior skill practice for a useful comparison."
+            )
+            action = (
+                "Use a short check in that skill to learn whether the scenario estimate or the "
+                "older observed record better reflects the student's current understanding."
+            )
+        elif readiness and (
+            "first" in lowered or "priority" in lowered or "check-in" in lowered
+        ):
+            noticed = (
+                f"{readiness_lowest.label} has the lowest next-practice estimate at "
+                f"{readiness_lowest.estimated_readiness:.0%}, based on "
+                f"{readiness_lowest.scenario_count} plausible scenarios and "
+                f"{readiness_lowest.prior_interactions} prior skill interactions."
+            )
+            action = (
+                "Start with one low-stakes example in a supported format and ask the student to "
+                "explain the first step before deciding on more practice."
+            )
+        elif readiness and ("strong" in lowered or "ready" in lowered):
+            noticed = (
+                f"{readiness_highest.label} has the highest next-practice estimate at "
+                f"{readiness_highest.estimated_readiness:.0%}."
+            )
+            action = (
+                "Confirm it with a brief retrieval item, then consider a modest increase in "
+                "complexity if the student's explanation supports the estimate."
+            )
+        elif "progress" in lowered or "improv" in lowered:
             noticed = (
                 f"{improving.label} shows the strongest recent improvement "
                 "among the displayed skills."

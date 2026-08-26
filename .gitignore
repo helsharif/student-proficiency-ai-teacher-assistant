@@ -181,5 +181,7 @@ secrets/
 notes/
 
 # Spreadsheet authoring previews and temporary support files
+scripts/node_modules/
 outputs/teacher_support_studio/*
 !outputs/teacher_support_studio/teacher_support_name_mapping.xlsx
+!outputs/teacher_support_studio/skill_emoji_mapping.xlsx

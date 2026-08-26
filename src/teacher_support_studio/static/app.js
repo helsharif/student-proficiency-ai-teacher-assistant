@@ -1,4 +1,10 @@
-const state = { scope: "class", classId: null, studentId: null, summary: null };
+const state = {
+  scope: "student",
+  classId: null,
+  studentId: null,
+  summary: null,
+  skillEmojis: {},
+};
 
 const $ = (selector) => document.querySelector(selector);
 const elements = {
@@ -10,7 +16,6 @@ const elements = {
   error: $("#error"),
   metricGrid: $("#metric-grid"),
   skillChart: $("#skill-chart"),
-  trendChart: $("#trend-chart"),
   questions: $("#suggested-questions"),
   messages: $("#messages"),
   form: $("#chat-form"),
@@ -24,6 +29,11 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+function skillEmoji(label) {
+  const skill = String(label).toLowerCase();
+  return state.skillEmojis[skill] || "✏️🔢";
 }
 
 async function api(path, options = {}) {
@@ -51,7 +61,11 @@ function showError(error) {
 
 async function initialize() {
   try {
-    const classes = await api("/api/v1/classes");
+    const [classes, skillEmojis] = await Promise.all([
+      api("/api/v1/classes"),
+      api("/api/v1/skill-emojis"),
+    ]);
+    state.skillEmojis = skillEmojis;
     elements.classSelect.innerHTML = classes
       .map((item) => `<option value="${item.id}">${escapeHtml(item.label)} · ${escapeHtml(item.detail)}</option>`)
       .join("");
@@ -75,9 +89,7 @@ async function refreshSummary() {
   setBusy(true);
   elements.error.classList.add("hidden");
   try {
-    const path = state.scope === "class"
-      ? `/api/v1/classes/${state.classId}/summary`
-      : `/api/v1/classes/${state.classId}/students/${state.studentId}/summary`;
+    const path = `/api/v1/classes/${state.classId}/students/${state.studentId}/summary`;
     state.summary = await api(path);
     renderSummary(state.summary);
     resetConversation();
@@ -93,7 +105,10 @@ function renderSummary(summary) {
   $("#context-label").textContent = summary.context_label;
   $("#entity-label").textContent = summary.entity_label;
   $("#headline").textContent = summary.headline;
-  elements.input.placeholder = summary.scope === "class" ? "Ask about this class…" : "Ask about this student…";
+  $("#readiness-copy").textContent =
+    `Estimated chance of first-attempt success on plausible next-practice scenarios. ` +
+    `Only skills with at least ${summary.readiness_min_interactions} prior interactions are included.`;
+  elements.input.placeholder = "Ask about this student…";
 
   elements.metricGrid.innerHTML = summary.cards.map((card) => `
     <article class="metric-card ${card.tone}">
@@ -101,54 +116,45 @@ function renderSummary(summary) {
       <strong class="metric-value">${escapeHtml(card.value)}</strong>
       <div class="metric-detail">${escapeHtml(card.detail)}</div>
     </article>`).join("");
+  elements.metricGrid.classList.toggle("hidden", summary.cards.length === 0);
 
-  elements.skillChart.innerHTML = summary.skills.length
-    ? summary.skills.map((skill) => `
-      <div class="skill-row" title="${escapeHtml(skill.interactions)} recent interactions">
-        <span class="skill-name">${escapeHtml(skill.label)}</span>
-        <div class="bar-track"><div class="bar-fill" style="width:${Math.max(2, skill.success_rate * 100)}%"></div></div>
-        <span class="skill-value">${Math.round(skill.success_rate * 100)}%</span>
-        <span class="skill-meta">${skill.interactions} interactions${skill.students ? ` · ${skill.students} students` : ""}</span>
-      </div>`).join("")
-    : "<p>No recent skill data is available.</p>";
-
-  renderTrend(summary.trend);
+  const orderedReadiness = [...summary.readiness]
+    .sort((left, right) => right.estimated_readiness - left.estimated_readiness);
+  const highestReadiness = orderedReadiness.slice(0, 5);
+  const highestLabels = new Set(highestReadiness.map((skill) => skill.label));
+  const lowestReadiness = orderedReadiness
+    .slice(-5)
+    .filter((skill) => !highestLabels.has(skill.label));
+  const readinessGroups = orderedReadiness.length
+    ? [
+      { label: "Highest estimated readiness", skills: highestReadiness },
+      { label: "Lowest estimated readiness", skills: lowestReadiness },
+    ].filter((group) => group.skills.length)
+    : [];
+  elements.skillChart.innerHTML = readinessGroups.length
+    ? readinessGroups.map((group) => `
+      <section class="readiness-group">
+        <h4>${group.label}</h4>
+        ${group.skills.map((skill) => `
+          <div class="readiness-row">
+            <strong class="readiness-name"><span class="skill-emoji" aria-hidden="true">${skillEmoji(skill.label)}</span>${escapeHtml(skill.label)}</strong>
+            <div class="bar-track">
+              <div class="bar-fill" style="width:${Math.max(2, skill.estimated_readiness * 100)}%"></div>
+            </div>
+            <strong class="readiness-value">${Math.round(skill.estimated_readiness * 100)}%</strong>
+          </div>`).join("")}
+      </section>`).join("")
+    : `<p>No skills currently meet the minimum of ${summary.readiness_min_interactions} prior interactions.</p>`;
   elements.questions.innerHTML = summary.suggested_questions.map((question) =>
     `<button class="question-chip" type="button" data-question="${escapeHtml(question)}">${escapeHtml(question)}</button>`
   ).join("");
   $("#dashboard-evidence").innerHTML = summary.evidence.map((item) => `<li>${escapeHtml(item)}</li>`).join("");
 
   document.querySelectorAll(".question-chip").forEach((button) => {
-    button.addEventListener("click", () => askQuestion(button.dataset.question));
+    button.addEventListener("click", () =>
+      askQuestion(button.dataset.question, { showUserMessage: false })
+    );
   });
-}
-
-function renderTrend(points) {
-  if (!points.length) {
-    elements.trendChart.innerHTML = "<p>No trend data is available.</p>";
-    return;
-  }
-  const width = 420;
-  const height = 205;
-  const pad = 25;
-  const xStep = points.length > 1 ? (width - pad * 2) / (points.length - 1) : 0;
-  const coordinates = points.map((point, index) => ({
-    x: pad + index * xStep,
-    y: height - pad - point.success_rate * (height - pad * 2),
-    value: Math.round(point.success_rate * 100),
-  }));
-  const line = coordinates.map((point) => `${point.x},${point.y}`).join(" ");
-  const area = `${pad},${height - pad} ${line} ${width - pad},${height - pad}`;
-  elements.trendChart.innerHTML = `
-    <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="First-attempt success trend from earlier to recent interactions">
-      <defs><linearGradient id="trendGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#62aaa4" stop-opacity=".35"/><stop offset="100%" stop-color="#62aaa4" stop-opacity="0"/></linearGradient></defs>
-      <line class="trend-grid" x1="${pad}" y1="${height * .25}" x2="${width - pad}" y2="${height * .25}" />
-      <line class="trend-grid" x1="${pad}" y1="${height * .5}" x2="${width - pad}" y2="${height * .5}" />
-      <line class="trend-grid" x1="${pad}" y1="${height * .75}" x2="${width - pad}" y2="${height * .75}" />
-      <polygon class="trend-area" points="${area}" />
-      <polyline class="trend-line" points="${line}" />
-      ${coordinates.map((point) => `<circle class="trend-dot" cx="${point.x}" cy="${point.y}" r="4"/><text class="trend-label" x="${point.x}" y="${point.y - 10}" text-anchor="middle">${point.value}%</text>`).join("")}
-    </svg>`;
 }
 
 function resetConversation() {
@@ -170,13 +176,17 @@ function addAssistantMessage(answer) {
       <details class="message-evidence"><summary>Show supporting evidence</summary><ul>${answer.supporting_evidence.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul></details>
       <span class="response-mode">${modeLabel}</span>
     </div>`);
-  elements.messages.scrollTop = elements.messages.scrollHeight;
+  const latestMessage = elements.messages.lastElementChild;
+  elements.messages.scrollTop = Math.max(
+    0,
+    latestMessage.offsetTop - elements.messages.offsetTop,
+  );
 }
 
-async function askQuestion(question) {
+async function askQuestion(question, { showUserMessage = true } = {}) {
   const cleanQuestion = String(question || "").trim();
   if (!cleanQuestion) return;
-  addUserMessage(cleanQuestion);
+  if (showUserMessage) addUserMessage(cleanQuestion);
   elements.input.value = "";
   const sendButton = elements.form.querySelector("button");
   sendButton.disabled = true;
@@ -187,7 +197,7 @@ async function askQuestion(question) {
       body: JSON.stringify({
         scope: state.scope,
         class_id: state.classId,
-        student_id: state.scope === "student" ? state.studentId : null,
+        student_id: state.studentId,
         question: cleanQuestion,
       }),
     });
@@ -199,19 +209,6 @@ async function askQuestion(question) {
     sendButton.innerHTML = 'Send <span aria-hidden="true">→</span>';
   }
 }
-
-document.querySelectorAll(".focus-button").forEach((button) => {
-  button.addEventListener("click", async () => {
-    state.scope = button.dataset.scope;
-    document.querySelectorAll(".focus-button").forEach((item) => {
-      const active = item === button;
-      item.classList.toggle("active", active);
-      item.setAttribute("aria-pressed", String(active));
-    });
-    elements.studentField.classList.toggle("hidden", state.scope !== "student");
-    await refreshSummary();
-  });
-});
 
 elements.classSelect.addEventListener("change", async () => {
   state.classId = Number(elements.classSelect.value);

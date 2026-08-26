@@ -11,6 +11,7 @@ from teacher_support_studio import __version__
 from teacher_support_studio.analytics import AnalyticsService
 from teacher_support_studio.assistant import TeacherAssistant
 from teacher_support_studio.schemas import ChatRequest, ChatResponse, DashboardSummary, EntityOption
+from teacher_support_studio.skill_emoji_mapping import SkillEmojiMappingService
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -28,6 +29,7 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 analytics = AnalyticsService()
 assistant = TeacherAssistant(analytics)
+skill_emojis = SkillEmojiMappingService()
 
 
 @app.get("/", include_in_schema=False)
@@ -38,6 +40,11 @@ def index() -> FileResponse:
 @app.get("/api/health")
 def health() -> dict[str, str]:
     return {"status": "ok", "version": __version__}
+
+
+@app.get("/api/v1/skill-emojis", response_model=dict[str, str])
+def list_skill_emojis() -> dict[str, str]:
+    return skill_emojis.mapping()
 
 
 @app.get("/api/v1/classes", response_model=list[EntityOption])
